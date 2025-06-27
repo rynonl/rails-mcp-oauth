@@ -130,6 +130,6 @@ class OAuthController < ApplicationController
   end
 
   def callback_url
-    request.base_url + '/o_auth/callback'
+    request.base_url + '/callback'
   end
 end

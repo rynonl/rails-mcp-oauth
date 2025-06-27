@@ -147,11 +147,11 @@ In MCP tools, you have access to:
 
 ## API Endpoints
 
-### OAuth Endpoints
+### OAuth Endpoints (Matching Context App)
 
-- `GET /o_auth/authorize` - Start OAuth flow
-- `GET /o_auth/callback` - Handle WorkOS callback
-- `POST /o_auth/token` - Exchange code for token
+- `GET /authorize` - Start OAuth flow
+- `GET /callback` - Handle WorkOS callback  
+- `POST /token` - Exchange code for token
 
 ### MCP Endpoints (Protected)
 

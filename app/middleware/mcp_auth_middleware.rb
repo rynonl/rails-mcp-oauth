@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'mcp_context_bridge'
+
 class McpAuthMiddleware
   def initialize(app)
     @app = app
@@ -17,12 +19,32 @@ class McpAuthMiddleware
         env['mcp.current_user'] = auth_result[:user]
         env['mcp.oauth_session'] = auth_result[:session]
         env['mcp.permissions'] = auth_result[:permissions]
+        
+        # Add context for MCP tools (similar to context app props)
+        context = {
+          current_user: auth_result[:user],
+          oauth_session: auth_result[:session],
+          permissions: auth_result[:permissions],
+          access_token: auth_result[:session].access_token,
+          refresh_token: auth_result[:session].refresh_token,
+          organization_id: auth_result[:user].organization_id
+        }
+        
+        env['mcp.context'] = context
+        
+        # Set context in thread-local storage for tool access
+        McpContextBridge.set_context(context)
       else
         return unauthorized_response(auth_result[:error])
       end
     end
 
-    @app.call(env)
+    result = @app.call(env)
+    
+    # Clear context after request
+    McpContextBridge.clear_context if mcp_endpoint?(Rack::Request.new(env).path)
+    
+    result
   end
 
   private

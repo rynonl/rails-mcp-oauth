@@ -15,11 +15,19 @@ class ApplicationTool < ActionTool::Base
     end
   end
   
-  def initialize(context: {})
-    super
-    @current_user = context[:current_user]
-    @oauth_session = context[:oauth_session] 
-    @user_permissions = context[:permissions] || []
+  def initialize(*args, **kwargs)
+    # Remove context from kwargs before passing to super
+    context = kwargs.delete(:context) || {}
+    super(*args, **kwargs)
+    
+    # Extract context from middleware thread-local storage or passed parameters
+    mcp_context = McpContextBridge.current_context.merge(context)
+    @current_user = mcp_context[:current_user]
+    @oauth_session = mcp_context[:oauth_session] 
+    @user_permissions = mcp_context[:permissions] || []
+    @access_token = mcp_context[:access_token]
+    @refresh_token = mcp_context[:refresh_token]
+    @organization_id = mcp_context[:organization_id]
   end
   
   def call(*args)
@@ -37,7 +45,7 @@ class ApplicationTool < ActionTool::Base
   
   private
   
-  attr_reader :current_user, :oauth_session, :user_permissions
+  attr_reader :current_user, :oauth_session, :user_permissions, :access_token, :refresh_token, :organization_id
   
   class PermissionError < StandardError; end
 end

@@ -8,27 +8,27 @@ class ImageGenerationTool < ApplicationTool
   
   arguments do
     required(:prompt).filled(:string).description('A text description of the image you want to generate')
-    optional(:style).filled(:string).description('Art style for the image (realistic, cartoon, abstract)')
+    optional(:steps).filled(:integer).description('The number of diffusion steps; higher values can improve quality but take longer. Must be between 4 and 8, inclusive.')
   end
   
-  def call(prompt:, style: 'realistic')
+  def call(prompt:, steps: 4)
+    # Call parent to check permissions first
+    super()
+    
     # This is a placeholder implementation
-    # In a real app, you'd integrate with an AI image generation service
+    # In a real app, you'd integrate with an AI image generation service like the context app
     
-    Rails.logger.info "Generating image for user #{current_user.id}: #{prompt} (#{style})"
+    Rails.logger.info "Generating image for user #{current_user.id}: #{prompt} (#{steps} steps)"
     
-    # Simulate image generation
-    image_url = generate_placeholder_image(prompt, style)
+    # Simulate AI image generation (context app uses Cloudflare AI)
+    image_data = generate_placeholder_image_data(prompt, steps)
     
     {
       content: [
         {
-          type: "text",
-          text: "Generated image with prompt: '#{prompt}' in #{style} style"
-        },
-        {
-          type: "text", 
-          text: "Image URL: #{image_url}"
+          type: "image",
+          data: image_data,
+          mimeType: "image/jpeg"
         }
       ]
     }
@@ -36,14 +36,22 @@ class ImageGenerationTool < ApplicationTool
   
   private
   
-  def generate_placeholder_image(prompt, style)
+  def generate_placeholder_image_data(prompt, steps)
     # In a real implementation, this would call an AI service like:
+    # - Cloudflare AI (like the context app uses: @cf/black-forest-labs/flux-1-schnell)
     # - OpenAI DALL-E
     # - Stability AI
     # - Midjourney API
-    # - etc.
+    # etc.
     
-    encoded_prompt = CGI.escape(prompt)
-    "https://via.placeholder.com/512x512/0066cc/ffffff?text=#{encoded_prompt}"
+    # For now, return a base64 encoded placeholder
+    # In the context app, this would be: response.image! (binary data)
+    placeholder_base64_image
+  end
+
+  def placeholder_base64_image
+    # This is a minimal 1x1 pixel JPEG in base64
+    # In production, this would be actual AI-generated image data
+    "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/wA8="
   end
 end

@@ -22,7 +22,7 @@ Rails.application.config.middleware.use McpAuthMiddleware
 
 FastMcp.mount_in_rails(
   Rails.application,
-  name: Rails.application.class.module_parent_name.underscore.dasherize,
+  name: "MCP server demo using AuthKit", # Match context app name
   version: '1.0.0',
   path_prefix: '/mcp', # This is the default path prefix
   messages_route: 'messages', # This is the default route for the messages endpoint
@@ -36,13 +36,8 @@ FastMcp.mount_in_rails(
   # allowed_ips: ['127.0.0.1', '::1']
 ) do |server|
   Rails.application.config.after_initialize do
-    # FastMcp will automatically discover and register:
-    # - All classes that inherit from ApplicationTool (which uses ActionTool::Base)
-    # - All classes that inherit from ApplicationResource (which uses ActionResource::Base)
-    server.register_tools(*ApplicationTool.descendants)
+    # Register all available tools - permission checking happens at execution time
+    server.register_tools(AddTool, ImageGenerationTool, SampleTool, UserInfoTool)
     server.register_resources(*ApplicationResource.descendants)
-    # alternatively, you can register tools and resources manually:
-    # server.register_tool(MyTool)
-    # server.register_resource(MyResource)
   end
 end
