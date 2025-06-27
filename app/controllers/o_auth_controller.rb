@@ -39,17 +39,17 @@ class OAuthController < ApplicationController
         code: params[:code]
       )
 
-      # Find or create user
+      # Find or create user (minimal database usage)
       user = User.from_workos_user(auth_response.user, auth_response.organization_id)
 
-      # Create OAuth session
-      oauth_session = OAuthSession.create_from_workos_response(
-        user, auth_response, session[:oauth_state]
-      )
+      # Store tokens in session for OAuth flow completion
+      # In WorkOS pattern, we primarily use the JWT access token, not database sessions
+      session[:workos_access_token] = auth_response.access_token
+      session[:workos_refresh_token] = auth_response.refresh_token
+      session[:workos_user_id] = user.workos_id
 
       # Generate authorization code for MCP client
       authorization_code = SecureRandom.urlsafe_base64(32)
-      session[:oauth_session_id] = oauth_session.id
       session[:authorization_code] = authorization_code
 
       # Redirect back to original client
@@ -57,10 +57,10 @@ class OAuthController < ApplicationController
       if redirect_uri
         redirect_to "#{redirect_uri}?code=#{authorization_code}&state=#{session[:oauth_state]}", allow_other_host: true
       else
+        # Return access token directly (stateless approach)
         render json: { 
-          access_token: oauth_session.access_token,
-          user: user.as_json(except: [:created_at, :updated_at]),
-          permissions: oauth_session.permissions
+          access_token: auth_response.access_token,
+          user: user.as_json(except: [:created_at, :updated_at])
         }
       end
 
@@ -87,20 +87,29 @@ class OAuthController < ApplicationController
       return
     end
 
-    # Get OAuth session
-    oauth_session = OAuthSession.find(session[:oauth_session_id])
-    unless oauth_session&.active?
+    # Return stored WorkOS access token (stateless approach)
+    access_token = session[:workos_access_token]
+    unless access_token
       render json: { error: 'Session expired' }, status: :unauthorized
       return
     end
 
-    render json: {
-      access_token: oauth_session.access_token,
-      token_type: 'Bearer',
-      expires_in: (oauth_session.expires_at - Time.current).to_i,
-      scope: oauth_session.permissions.join(' '),
-      user_id: oauth_session.user.workos_id
-    }
+    # Decode JWT to get expiration and permissions
+    begin
+      token_data = JWT.decode(access_token, nil, false).first
+      expires_in = token_data['exp'] ? (token_data['exp'] - Time.current.to_i) : 3600
+      permissions = token_data['permissions'] || []
+      
+      render json: {
+        access_token: access_token,
+        token_type: 'Bearer',
+        expires_in: expires_in,
+        scope: permissions.join(' '),
+        user_id: session[:workos_user_id]
+      }
+    rescue JWT::DecodeError
+      render json: { error: 'Invalid token' }, status: :unauthorized
+    end
   end
 
   private

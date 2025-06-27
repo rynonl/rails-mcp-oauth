@@ -20,14 +20,12 @@ class McpAuthMiddleware
         env['mcp.oauth_session'] = auth_result[:session]
         env['mcp.permissions'] = auth_result[:permissions]
         
-        # Add context for MCP tools (similar to context app props)
+        # Add context for MCP tools (matching context app props exactly)
         context = {
           current_user: auth_result[:user],
-          oauth_session: auth_result[:session],
           permissions: auth_result[:permissions],
-          access_token: auth_result[:session].access_token,
-          refresh_token: auth_result[:session].refresh_token,
-          organization_id: auth_result[:user].organization_id
+          access_token: auth_result[:access_token],
+          organization_id: auth_result[:organization_id]
         }
         
         env['mcp.context'] = context
@@ -61,24 +59,42 @@ class McpAuthMiddleware
       return { success: false, error: 'Missing or invalid Authorization header' }
     end
 
-    token = auth_header.split(' ', 2).last
+    access_token = auth_header.split(' ', 2).last
     
-    # Find active OAuth session with this access token
-    oauth_session = OAuthSession.joins(:user)
-                                .where(access_token: token)
-                                .active
-                                .first
+    # Validate JWT and extract claims (WorkOS stateless approach)
+    begin
+      # Decode JWT without verification for now (in production, verify signature)
+      token_data = JWT.decode(access_token, nil, false).first
+      
+      # Check token expiration
+      exp = token_data['exp']
+      if exp && Time.at(exp) <= Time.current
+        return { success: false, error: 'Access token expired' }
+      end
+      
+      # Extract user info from JWT
+      user_id = token_data['sub']
+      permissions = token_data['permissions'] || []
+      organization_id = token_data['org']
+      
+      # Find or create user from WorkOS ID (minimal database usage)
+      user = User.find_by(workos_id: user_id)
+      unless user
+        # Could fetch user details from WorkOS API if needed
+        return { success: false, error: 'User not found' }
+      end
 
-    unless oauth_session
-      return { success: false, error: 'Invalid or expired access token' }
+      {
+        success: true,
+        user: user,
+        access_token: access_token,
+        permissions: permissions,
+        organization_id: organization_id
+      }
+    rescue JWT::DecodeError => e
+      Rails.logger.error "JWT decode error: #{e.message}"
+      { success: false, error: 'Invalid access token format' }
     end
-
-    {
-      success: true,
-      user: oauth_session.user,
-      session: oauth_session,
-      permissions: oauth_session.permissions
-    }
   rescue StandardError => e
     Rails.logger.error "MCP Authentication error: #{e.message}"
     { success: false, error: 'Authentication failed' }

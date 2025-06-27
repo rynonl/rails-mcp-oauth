@@ -23,10 +23,8 @@ class ApplicationTool < ActionTool::Base
     # Extract context from middleware thread-local storage or passed parameters
     mcp_context = McpContextBridge.current_context.merge(context)
     @current_user = mcp_context[:current_user]
-    @oauth_session = mcp_context[:oauth_session] 
     @user_permissions = mcp_context[:permissions] || []
     @access_token = mcp_context[:access_token]
-    @refresh_token = mcp_context[:refresh_token]
     @organization_id = mcp_context[:organization_id]
   end
   
@@ -45,7 +43,7 @@ class ApplicationTool < ActionTool::Base
   
   private
   
-  attr_reader :current_user, :oauth_session, :user_permissions, :access_token, :refresh_token, :organization_id
+  attr_reader :current_user, :user_permissions, :access_token, :organization_id
   
   class PermissionError < StandardError; end
 end
