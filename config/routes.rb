@@ -1,4 +1,8 @@
 Rails.application.routes.draw do
+  # OAuth endpoints for WorkOS authentication
+  get 'o_auth/authorize', to: 'o_auth#authorize'
+  get 'o_auth/callback', to: 'o_auth#callback'
+  post 'o_auth/token', to: 'o_auth#token'
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
