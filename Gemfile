@@ -45,7 +45,7 @@ gem "workos", "~> 5.0"
 gem "omniauth", "~> 2.1"
 gem "omniauth-oauth2", "~> 1.8"
 gem "omniauth-rails_csrf_protection", "~> 1.0"
-gem "jwt", "~> 2.7"
+gem "jwt", "~> 2.10"
 
 group :development, :test do
   gem "rspec-rails", "~> 8.0.0"
