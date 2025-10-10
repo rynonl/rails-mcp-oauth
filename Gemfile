@@ -41,7 +41,7 @@ gem "thruster", require: false
 # gem "image_processing", "~> 1.2"
 
 # OAuth and WorkOS integration
-gem "workos", "~> 5.0"
+gem "workos", "~> 5.26"
 gem "omniauth", "~> 2.1"
 gem "omniauth-oauth2", "~> 1.8"
 gem "omniauth-rails_csrf_protection", "~> 1.0"
